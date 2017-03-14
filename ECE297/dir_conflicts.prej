@@ -1,0 +1,52 @@
+Trying to add new property 'svn:ignore' with value 'build
+libstreetmap.a
+mapper
+libstreetsdatabase.a
+',
+but property already exists with value 'build
+libstreetmap.a
+libstreetsdatabase.a
+mapper
+'.
+Trying to change property 'svn:ignore' from 'build
+libstreetmap.a
+mapper
+libstreetsdatabase.a
+' to 'build
+libstreetmap.a
+mapper
+libstreetsdatabase.a
+test_libstreetmap
+.nfs00000000006c088f00000168
+',
+but the property has been locally changed from 'build
+libstreetmap.a
+mapper
+libstreetsdatabase.a
+' to 'build
+libstreetmap.a
+libstreetsdatabase.a
+mapper
+'.
+Trying to change property 'svn:ignore' from 'build
+libstreetmap.a
+mapper
+libstreetsdatabase.a
+test_libstreetmap
+.nfs00000000006c088f00000168
+' to 'build
+libstreetmap.a
+mapper
+libstreetsdatabase.a
+',
+but the property has been locally changed from 'build
+libstreetmap.a
+mapper
+libstreetsdatabase.a
+test_libstreetmap
+.nfs00000000006c088f00000168
+' to 'build
+libstreetmap.a
+libstreetsdatabase.a
+mapper
+'.

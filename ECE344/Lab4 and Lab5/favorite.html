@@ -1,0 +1,580 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- saved from url=(0068)http://www.eecg.toronto.edu/~ashvin/courses/ece344/current/lab4.html -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width">
+<title>
+Lab 4, ECE344, Fall 2015
+</title>
+<link rel="stylesheet" type="text/css" href="./Lab 4, ECE344, Fall 2015_files/default.css">
+<link rel="stylesheet" type="text/css" href="./Lab 4, ECE344, Fall 2015_files/local.css">
+</head>
+
+<body>
+
+<table class="maintable">
+<tbody><tr>
+
+<td class="left">
+<!-- <img src="spacer.gif"  alt="" height="1" width="200"> -->
+<img src="./Lab 4, ECE344, Fall 2015_files/deadlock.jpg" alt="Deadlock" width="200">
+Instructor: <a href="http://www.eecg.toronto.edu/~ashvin/">Ashvin Goel</a><br>
+Course Number: ECE344<br>
+<a class="invisible" href="http://validator.w3.org/check?uri=referer">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a>
+<h2></h2>
+<a href="http://www.eecg.toronto.edu/~ashvin/courses/ece344/current/index.html">Home</a><br>
+<a href="http://www.eecg.toronto.edu/~ashvin/courses/ece344/current/lectures.html">Lecture Notes</a><br>
+<a href="http://www.eecg.toronto.edu/~ashvin/courses/ece344/current/lab-assignments.html">Lab Assignments</a><br>
+<!-- <a href="contest.html">Programming Contest</a><br/> -->
+<a href="https://piazza.com/utoronto.ca/fall2015/ece344">Discussion (piazza)</a><br>
+<a href="https://portal.utoronto.ca/">Grades (UofT portal)</a><br>
+</td>
+
+<td class="right">
+<div class="centeralign">
+<h1>Operating Systems</h1>
+<h2 class="noborder">ECE344, Fall 2015<br>
+University of Toronto</h2>
+<br>
+</div>
+
+<div class="main">
+
+<h2>Lab 4: A Multi-Threaded Web Server</h2>
+
+<h4>Due Date: Nov 9, 2015, 5 pm</h4>
+
+<p>In this lab, you will be developing a multi-threaded web server, and
+  evaluating its performance. To simplify the project, we are providing you with
+  the code for a very basic web server. This basic web server operates with only
+  a single thread. It will be your job to make the web server multi-threaded so
+  that it is more efficient.</p>
+
+<h2>HTTP Background</h2> 
+
+<p>In this section, we provide a brief overview of how a simple web server
+  works and the HTTP protocol. Our goal in providing you with a basic web server
+  is that you should be shielded from all of the details of network connections
+  and the HTTP protocol. The code that we give you already handles everything
+  that we describe in this section. If you are really interested in the full
+  details of the HTTP protocol, you can read
+  the <a href="http://tools.ietf.org/html/rfc7230">HTTP
+    specification</a>, but we do not recommend it for this project.</p>
+
+<p>Most web browsers and web servers interact using a text-based protocol
+  called HTTP (Hypertext Transfer Protocol). A web browser opens an Internet
+  connection to a web server and requests some content with HTTP. The web server
+  responds with the requested content and closes the connection. The browser
+  reads the content and displays it on the screen.</p> 
+
+<p>Each piece of content on the server is associated with a file. If a client
+  requests a specific disk file, then this is referred to as static content. If
+  a client requests an executable file to be run and its output returned, then
+  this is called dynamic content. In this lab, our web server will only handle
+  static content.</p>
+
+<p>Each file requested from the server has a unique name known as a URL
+  (Universal Resource Locator). For example, the
+  URL <tt>http://www.eecg.toronto.edu:80/Welcome.html</tt> identifies an HTML
+  file called “index.html” on Internet host
+  “www.eecg.toronto.edu” that is managed by a web server listening
+  on port 80. The port number is optional and defaults to the well-known HTTP
+  port of 80.</p>
+
+<!--
+<p>URLs for executable files can include program arguments after the file
+  name. A &ldquo;?&rdquo; character separates the file name from the arguments
+  and each argument is separated by a &ldquo;&amp;&rdquo; character. This string
+  of arguments will be passed to a CGI program as part of its
+  &ldquo;QUERY_STRING&rdquo; environment variable.</p>
+-->
+
+<p>An HTTP request (from the web browser to the server) consists of a request
+  line, followed by zero or more request header lines, and finally an empty text
+  line. A request line has the form: <tt>method uri
+  version</tt>. The <tt>method</tt> is usually GET (but may be other things,
+  such as POST, OPTIONS, or PUT). The <tt>uri</tt> is the file name and any
+  optional arguments (for dynamic content). The <tt>version</tt> indicates the
+  version of the HTTP protocol that the web client is using (e.g., HTTP/1.0 or
+  HTTP/1.1). The request headers define various parameters of the request such
+  as the type of browser (user agent) making the request. Each header is a
+  colon-separated name-value pair in clear-text string format. The request line
+  and other header fields must each end with &lt;CR&gt;&lt;LF&gt; (that is, a
+  carriage return character followed by a line feed character). The empty line
+  must consist of only &lt;CR&gt;&lt;LF&gt;.</p>
+
+<p>An HTTP response (from the server to the browser) is similar; it consists of
+  a response line, zero or more response header lines, an empty text line, and
+  finally the interesting part, the response body. A response line has the
+  form <tt>version status message</tt>. The <tt>status</tt> is a three-digit
+  positive integer that indicates the state of the request; some common states
+  and the corresponding messages are 200 for <b>OK</b>, 403
+  for <b>Forbidden</b>, and 404 for <b>Not found</b>. Two important lines in the
+  response header are <b>Content-Type</b>, which tells the client the MIME type
+  of the content in the response body (e.g., html or gif)
+  and <b>Content-Length</b>, which indicates the size of the response body in
+  bytes. The server can add any custom header line.</p>
+
+<p>Again, you don't need to know this information about HTTP unless you want
+  to understand the details of the code we have given you. <b>You will not need
+    to modify any of the procedures in the web server that deal with the HTTP
+    protocol or network connections.</b></p> 
+
+<h2>Setup</h2> 
+
+<p>Add the source files for this lab, available in <tt>webserver.tar</tt>, to
+  your repository, and run <tt>make</tt> in the newly created <tt>webserver</tt>
+  directory.</p>
+
+<pre>cd ~/ece344
+tar -xf /cad2/ece344f/src/webserver.tar
+git status # should say that "webserver/" directory is untracked
+git add webserver
+git commit -m "Initial code for Lab 4"
+git tag Lab4-start
+cd webserver
+make
+</pre>
+
+<p>The make command will create four executables
+  called <tt>server</tt>, <tt>client_simple</tt>, <tt>client</tt>
+  and <tt>fileset</tt>. We will describe the <tt>server</tt> program here, and
+  then describe the other three programs later.</p>
+
+<p>The <tt>server</tt> program we have provided you is a basic, single-threaded
+  server. When you run it, you need to specify the port number that it will
+  listen on. You should specify port numbers that are greater than about 2000 to
+  avoid active ports. When you then connect your web browser to this server,
+  make sure that you specify this same port. For example, assume that you are
+  running on <tt>ug205.eecg</tt> and use port number 2003. Copy your favorite
+  HTML file, called <tt>favorite.html</tt> to the <tt>webserver</tt>
+  directory. Then, you can view this file from a web browser (running on the
+  same or a different machine), by using the
+  url: <tt>ug205.eecg.toronto.edu:2003/favorite.html</tt>. Note that you will
+  need to run the web browser on one of the lab machines.</p>
+
+<p>We are providing you with a bare bones, minimal web server. For example, the
+  web server does not handle any HTTP requests other than GET. Also, it does not
+  support running CGI programs. This web server is also not very robust; for
+  example, if a web client closes its connection to the server, it may crash. We
+  do not expect you to fix these problems!</p>
+
+<p>The helper functions are simply wrappers for system calls that check the
+  error codes of the system calls and immediately terminate if an error
+  occurs. One should <b>always check error codes!</b> However, many programmer
+  don't like to do it because they believe that it makes their code less
+  readable; the solution is to use these wrapper functions.</p> 
+
+<h2 id="multi-threaded">Multi-threaded Web Server</h2> 
+
+<p>The basic web server that we have provided has a single thread of
+  control. Single-threaded web servers suffer from a fundamental performance
+  problem in that only a single HTTP request can be serviced at a time. Thus,
+  every other client that is accessing this web server must wait until the
+  current HTTP request has finished. This is a problem for two reasons. First,
+  if your server is running on a multi-core processor or a multi-processor
+  machine, a single thread can only use a single processor core, under-utilizing
+  the machine. Second, if the current HTTP request is for a file that is
+  resident only on disk (i.e., it is not in memory), then the request will be
+  delayed until the file can be fetched from disk, during which time all the
+  cores will remain completely idle.</p>
+
+<p>In this lab, you will address the limitations of the basic web server by
+  making it multi-threaded. The simplest approach to building a multi-threaded
+  server is to spawn a new thread for serving each new HTTP request. The OS will
+  then schedule these threads according to its own policy. The advantage of
+  creating these threads is that short requests will not need to wait for a long
+  request to complete. Further, when one thread is blocked (i.e., waiting for
+  disk I/O to finish to fetch the file) the other threads can continue to handle
+  other requests. However, the drawback of the one-thread-per-request approach
+  is that the web server pays the overhead of creating a new thread on every
+  request.</p>
+
+<p>Therefore, the generally preferred approach for designing a multi-threaded
+  server is to create a <b>fixed-size pool</b> of worker threads when the web
+  server is first started. With this pool-of-threads approach, each thread is
+  blocked until there is an HTTP request for it to handle. Therefore, if there
+  are more worker threads than active requests, then some of the threads will be
+  blocked, waiting for new HTTP requests to arrive. If there are more requests
+  than worker threads, then those requests will need to be buffered until there
+  is a ready thread. In this lab, you will implement this web server design.</p>
+
+<p>In your implementation, you must have a master thread that begins by
+  creating a pool of worker threads, the number of which is specified on the
+  command line. Your master thread is then responsible for accepting new HTTP
+  connections over the network and placing the socket descriptor for this
+  connection into a fixed-size request buffer. The number of elements in the
+  buffer is also specified on the command line. Note that the web server we have
+  provided uses a single thread that accepts a connection, and then immediately
+  handles the connection by reading the request and sending the response. In
+  your web server, this (master) thread should place the connection descriptor
+  into the fixed-size buffer and return to accepting more connections, i.e., it
+  should not read the request or perform any request processing.</p>
+
+<p>Each worker thread wakes up when there is an HTTP request in the queue. Once
+  the worker thread wakes, it processes an HTTP request by performing a read on
+  the network descriptor, obtains the specified content by reading the file that
+  is requested, and then returns the content to the client by writing to the
+  descriptor. The worker thread then waits for another HTTP request.</p>
+
+<p>When there are multiple HTTP requests available, the requests are handled in
+  FIFO order. Hence, when a worker thread wakes up, it handles the first request
+  (i.e., the oldest request) in the buffer. Note that the HTTP requests will not
+  necessarily finish in FIFO order. The order in which the requests complete
+  will depend upon how long it takes to process the request and also on how the
+  OS schedules the active threads.</p>
+
+<p>Note that the master thread and the worker threads are in a
+  producer-consumer relationship and require that their accesses to the shared
+  buffer be synchronized. Specifically, the master thread must block and wait if
+  the buffer is full. A worker thread must wait if the buffer is empty.</p>
+
+<h2 id="web-server">Running the Web Server</h2> 
+
+<p>The web server we provide should be invoked as follows:</p>
+
+<pre>  ./server port nr_threads max_requests max_cache_size
+</pre>
+
+<p>The command line arguments are:</p>
+
+<ul>
+  <li><b>port:</b> the port number that the web server should listen on.</li>
+  
+  <li><b>nr_threads:</b> the number of worker threads that should be created
+    within the web server. This number must be non-negative (&gt;= 0). When it is
+    zero (zero worker threads), the basic web server that we have provided is
+    run. When it is positive, then your implementation should create worker
+    threads.</li>
+
+  <li><b>max_requests:</b> the number of request connections that can be
+    accepted at one time. This parameter specifies the size of the fixed-size
+    buffer, and it applies only for the multi-threaded web server. It must be a
+    positive integer. Note that it is not an error for more or less threads to
+    be created than the buffer size.</li>
+
+  <li><b>max_cache_size:</b> we will use this parameter in the next lab. For the
+    moment, you can run the server with a value of 0 for this parameter.</li>
+</ul>
+
+<p>You can run the initial web server that we have provided on port 5003 as
+  follows:</p>
+
+<pre>  ./server 5003 0 0 0
+</pre>
+
+<p>After you have implemented the multi-threaded web server, you could run your
+  server as follows:</p>
+
+<pre>  ./server 5003 8 16 0
+</pre>
+
+<p>Then your server should create 8 worker threads for handling HTTP requests,
+  and allocate 16 buffers so that up to a maximum of 16 connections can be
+  waiting to be served. Note that a request that is being served by a worker
+  thread should no longer be in the request queue.
+</p>
+
+<h2 id="client">Running the Client</h2> 
+
+<p>We have provided a simple browser client program
+  called <tt>client_simple</tt>. Go ahead and use it as follows:</p>
+
+<pre>  ./client_simple www.ece.toronto.edu 80 /index.html
+</pre>
+
+<p>The client simple program will allow you to fetch a single file from any web
+  server. If you wish to use it for your own web server, you can use it as
+  follows:</p>
+
+<pre>  ./client_simple localhost 5003 /favorite.html
+</pre>
+
+<p>Here <tt>client_simple</tt> is run on the same machine as your server and
+  hence it contacts the <tt>localhost</tt> machine. The port on which your
+  server is assumed to be listening is 5003. The <tt>favorite.html</tt> file
+  should lie in the <tt>webserver</tt> directory.</p>
+
+<p>The <tt>client_simple</tt> program can be used test your web server. But it
+  is hard to measure the performance of your web server with this simple
+  program. Instead, we have provided you the <tt>client</tt> program for stress
+  testing your web server. To run the
+  <tt>client</tt> program, you will first need to generate a set of files that
+  will be requested from the server. To do so, run the following command:</p>
+
+<pre>  ./fileset
+</pre>
+
+<p>The <tt>fileset</tt> program generates a set of files in a directory. By
+  default, it generates 256 files in the <tt>fileset_dir</tt> directory. The
+  mean size for each file is 3 blocks, or 12 KB. It also generates an index file
+  called <tt>fileset_dir.idx</tt>. This index file lists the total number of 
+  files in the file set in the first line. After that, it lists one file per
+  line. For each file, it lists the name of the file, a simple checksum for the
+  file, and the size of the file. You can find out the parameters of the
+  <tt>fileset</tt> program by running <tt>fileset</tt> with the <tt>--help</tt>
+  option.</p>
+
+<pre>  ./fileset --help
+</pre>
+
+<p>The file sizes generated by the <tt>fileset</tt> program are distributed
+  according to
+  a <a href="http://en.wikipedia.org/wiki/Pareto_distribution">Pareto
+    distribution</a>, which is a
+  a <a href="http://en.wikipedia.org/wiki/Long_tail">long tail</a>
+  distribution. For the <tt>fileset</tt> program, this means that while most
+  files are relatively small and close to the mean file size, there will be some
+  files with very large sizes. These file size distributions are often found in
+  practice. For example, most of the files in a system will be small but a few
+  files are very large (e.g., video files, virtual machine images, etc.).</p>
+
+<p>After generating the fileset, you can run the <tt>client</tt> program as
+  follows:</p>
+
+<pre>  ./client [-t] host port nr_times nr_threads fileset_dir.idx
+</pre>
+
+<p>The <tt>host</tt> argument is the name of the host on which the server is
+  running. The <tt>port</tt> argument should be the same as the port at which
+  the web server is listening for connections. We have provided you a
+  multi-threaded <tt>client</tt> program, that runs
+  with <tt>nr_threads</tt>. Each thread runs a loop <tt>nr_times</tt>,
+  requesting a random file from the file set, once per loop. So the total number
+  of file requests made by the client is <tt>nr_times * nr_threads</tt>. To
+  request one file, make both these arguments have the value of
+  1. The <tt>fileset_dir.idx</tt> argument is the index file generated by
+  the <tt>fileset</tt> program that provides the file set information.</p>
+
+<p id="self-similar">The client requests files randomly using
+  a <a href="http://en.wikipedia.org/wiki/Self-similar_process">self-similar</a>
+  process. In our case, this means that the client requests files with a lower
+  index value more often. In particular, the top 20% of the files in file set
+  are requested 80% of the time. Again, this behavior is typical of real-world
+  web servers (many more
+  people <a href="http://fanpagelist.com/category/celebrities/">visit</a>
+  Shakira's facebook page than your home page).</p>
+
+<p>When the <tt>client</tt> program is run, it will output the contents of the
+  files in the file set to the terminal. This will be a lot of output, and the
+  output has (you guessed that) random printable ascii characters. You can avoid
+  seeing this output by piping the output to <tt>/dev/null</tt> as follows:</p>
+
+<pre>  ./client host port nr_times nr_threads fileset_dir.idx &gt; /dev/null
+</pre>
+
+<p>Alternatively, you can use the client's <tt>[-t]</tt> option, which does not
+  print the file output. Instead, it outputs in a single line, the time it took
+  to run the client. This will allow you to time the client run.</p>
+
+<p>How do we know that the server is working correctly? The server generates the
+  file size and the file checksum in the response header lines, as shown in an
+  example header below:</p>
+
+<pre>Header: HTTP/1.0 200 OK
+Header: Server: OS Web Server
+Header: Content-Type: text/plain
+Header: Content-Length: 619
+Header: Content-Csum: 49888
+</pre>
+
+<p>Recall the index file generated by the <tt>fileset</tt> program. This file
+  also has the file length and checksum fields for each file. The client
+  performs two types of checks. First, it checks that the length and the
+  checksum fields in the index file match the values in the response header
+  lines shown above. Second, it also checks that the file content that it
+  receives (the response body) has the same correct length and checksum
+  values. So if your web server is not working correctly, these checks will not
+  pass, and your client will crash.</p>
+
+<h2 id="requirements">Solution Requirements</h2>
+
+<p>You are required to use <b>condition variables</b> for synchronization. <b>If
+  your implementation performs any busy-waiting (or spin-waiting), you will be
+  heavily penalized.</b></p>
+
+<p>The rest of the requirements are described earlier, when we described the
+  <a href="http://www.eecg.toronto.edu/~ashvin/courses/ece344/current/lab4.html#multi-threaded">design of the multi-threaded web server</a>.</p>
+  
+<h2>Hints and Advice</h2> 
+
+<p>We recommend understanding how the code that we gave you works. We provide
+  the following files:</p>
+
+<ul>
+  <li><b>server.c:</b> Contains the main() function for the web server.</li>
+  <li><b>server_thread.c:</b> Currently, this file contains the main routine for
+    serving web requests. This routine, invoked by the main server thread in the
+    basic web server, calls various functions in <tt>request.c</tt>, described
+    below. <b>This is the only file that you should modify for this
+    lab.</b></li>
+  <li><b>request.c:</b> Performs most of the work for handling HTTP requests,
+    including reading requests from a connection, and sending the response back.
+    All procedures in this file begin with the string
+    “request”.</li>
+  <li><b>common.c:</b> Contains wrapper functions for the system calls invoked
+    by the various programs.</li>
+  <li><b>client.c:</b> Contains the main() function and the support routines for
+    our stylized web client.</li>
+  <li><b>client_simple.c:</b> Contains the main() function and the support
+    routines for a simple web client that requests a single file.</li>
+  <li><b>fileset.c:</b> Contains the code for generating the file set.</li>
+</ul>
+
+<p>The best way to learn about the code is to compile it and run it. Run the
+  server we gave you with your preferred web browser or with
+  the <tt>client_simple</tt> program that we have provided to you. Request a
+  single file using the client code, and see the output of the server and the
+  client. Make small changes to the server code (e.g., have it print out more
+  debugging information) to see if you understand how it works.</p>
+
+<p>We anticipate that you will find the following routines useful for creating
+  and synchronizing
+  threads: <tt>pthread_create</tt>, <tt>pthread_mutex_init</tt>,
+  <tt>pthread_mutex_lock</tt>, <tt>pthread_mutex_unlock</tt>,
+  <tt>pthread_cond_init</tt>, <tt>pthread_cond_wait</tt>, and
+  <tt>pthread_cond_signal</tt>. To find information on these library routines,
+  read their manuals on the web.</p>
+
+<p>You are encouraged to reuse <i>your own</i> code that you might have
+developed in the previous labs or in previous courses to handle things such as
+queues, hashing, etc.</p>
+
+<p>Feel free to consult the instructor's notes on the solutions to the
+producer-consumer problem.</p>
+
+<h2>Note on Security</h2>
+
+<p>It is worthwhile to be a little careful with security during this
+  project. The server program that we have provided does not serve files that
+  have absolute paths, or a <b>..</b> in the file name. Both would allow others
+  to explore any files in your home directory to which you have access (and they
+  normally don't). We also disallow serving “.c” and
+  “.h” source files. Where are these checks implemented? Even so, it
+  will be a good idea to avoid running your server for a long time.</p>
+
+<h2>Testing Your Code</h2>
+
+<p>To help you test your code better, we have provided several
+  scripts, as described below.</p>
+
+<dl>
+  <dt><b>run-one-experiment:</b></dt>
+  <dd>This script runs the <tt>server</tt> program, and then it runs
+    the <tt>client</tt> program 10 times, and provides the average run time of
+    the client. All the client run times are recorded in the <tt>run.out</tt>
+    file. Read the beginning of this file to see how it should be invoked. This
+    script can take up to 3 minutes to run.</dd>
+  
+  <dt><b>run-experiment:</b></dt>
+  <dd>This script runs the <tt>run-one-experiment</tt> script while varying
+    various server parameters. Read the beginning of this file to see how it
+    should be invoked. For this lab, you should invoke it with the
+    “nocache” argument. In this case, the script will generate two
+    output files, <tt>plot-threads.out</tt>
+    and <tt>plot-requests.out</tt>. These files contain the client run times
+    when the number of threads and outstanding requests are varied for the
+    server. This script can take 20-30 minutes to run, so use it when you are
+    close to finishing the lab.</dd>
+
+  <dt><b>plot-experiment:</b></dt>
+  <dd>This script plots the output files generated
+    by <tt>run-experiment</tt>. The plots are available
+    in <tt>plot-threads.pdf</tt> and <tt>plot-requests.pdf</tt>.</dd>
+</dl>
+
+<p>You can test your entire code by using our auto-tester program at any time by
+  following the <a href="http://www.eecg.toronto.edu/~ashvin/courses/ece344/current/testing.html">testing instructions.</a> For this
+  assignment, the auto-tester program simply runs the <tt>run-experiment</tt>
+  and the <tt>plot-experiment</tt> scripts.</p>
+
+<!--
+
+<h2>Performance Results</h2>
+
+<p>The <tt>run-experiment</tt> script allows you to evaluate the performance of
+  your web server. For this lab, we ask that you write a document in a new text
+  file, called <tt>evaluation.txt</tt>, that describes your web server
+  performance results.</p>
+
+<p>Your document should describe what you expect the server performance to be as
+  you vary the server parameters, and whether your plots meet these
+  expectations. If the plots don't meet these expectations, you should provide a
+  reasonable justification. Do not write more than 30-40 lines of text, each
+  line at most 80 characters wide.</p>
+
+<p>For this lab, we will be evaluating your submission using our automated
+  marker as well as your performance write up. <b>We will allocate 25% of the
+    lab marks for the write up.</b></p>
+-->
+
+<h2 id="using-git">Using Git</h2>
+
+<p>You should only modify the following files in this lab.</p>
+
+<pre>  server_thread.c
+</pre>
+
+<!--
+<p>The <tt>evaluation.txt</tt> file is a new file that you will create to
+  described your performance results. It should be located in
+  the <tt>webserver</tt> directory.</p>
+-->
+
+<p>You can find the files you have modified by running the <tt>git status</tt>
+command.</p>
+
+<p>You can commit your modified files to your local repository as follows:</p>
+
+<pre>  git add server_thread.c
+  git commit -m "Committing changes for Lab 4"
+</pre>
+
+<p>We suggest committing your changes frequently by rerunning the commands above
+(with different meaningful messages to the commit command), so that you can go
+back to see the changes you have made over time, if needed.</p>
+
+<p>Once you have tested your code, <b>and committed it</b> (check that by
+running <tt>git status</tt>), you can tag the assignment as done.</p>
+
+<pre>git tag Lab4-end
+</pre>
+
+<p>This tag names the last commit, and you can see that using the <tt>git
+log</tt> or the <tt>git show</tt> commands.</p>
+
+<p>If you want to see all the changes you have made in this lab, you can run the
+following <tt>git diff</tt> command.</p>
+
+<pre>git diff Lab4-start Lab4-end
+</pre>
+
+<p>More information for using the various git commands is available in
+the <a href="http://www.eecg.toronto.edu/~ashvin/courses/ece344/current/lab1.html#using-git">Lab 1 instructions</a>.</p>
+
+<h2>Code Submission</h2>
+
+<p>Make sure to add the <tt>Lab4-end</tt> tag to your local repository as
+described above. Then run the following command to update your remote
+repository:</p>
+
+<pre>git push --tags
+</pre>
+
+<p>For more details regarding code submission, please follow
+the <a href="http://www.eecg.toronto.edu/~ashvin/courses/ece344/current/submit.html">lab submission instructions</a>.</p>
+
+<p>Please also make sure to test whether your submission succeeded by simulating
+our <a href="http://www.eecg.toronto.edu/~ashvin/courses/ece344/current/testing.html#marker">automated marker</a>.</p>
+
+<hr>
+<br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br>
+</div>
+</td>
+</tr>
+</tbody></table>
+
+
+</body></html>

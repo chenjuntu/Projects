@@ -1,0 +1,145 @@
+Lab 1: Introduction to DE2 and Nios II Assembly
+
+Description
+Preparation (1 mark)
+In Lab (1 mark)
+Quiz (1 mark)
+Description
+The purpose of this lab is for you to gain familiarity with Assembly Language Programming, and the environment for programming the Altera Nios II processor at the assembly language level.
+
+The Nios II processor is a soft processor, i.e., it is a processor implemented in the reconfigurable fabric of an FPGA. The FPGA that we use is supplied on a board called the DE2 made by Altera. You will interact with the processor using the Altera Monitor Program. As this is probably the first time you will be using the Monitor Program, please skim through its documentation (Monitor Program Tutorial). Keep it as a reference for the rest of the labs.
+
+This lab contains a few questions and exercises for the reader: don't be afraid to experiment with the software, the debugging tools and also don't hesitate to ask your TA if you are unclear about any of the material in this lab.
+
+Preparation (1 Mark)
+Read through the Nios II Assembler section of the DESL website. Make sure you understand all the material in the commented example program and answer the following questions:
+
+What is the purpose of the .global directive?
+How do you specify the entry point (or beginning) of your program?
+There are separate "sections" for code and data, how do you specify to the assembler which section you are currently in?
+What directives do you use to declare a byte, half-word, word, or string?
+What does the .align directive do? What might go wrong, if anything, if you don't properly align variables? HINT: read the description of the ldw instruction in the Nios II Instruction Set Reference on the DESL website.
+In the example program (from the DESL website), how many bytes of memory are used up by the string named hellostring?
+How do you declare space for variables in memory without initializing them?
+In Lab (1 Mark)
+The in-lab part has two parts. In the first part, which is organized as a tutorial, you will use an existing assembly source file to introduce yourself to the Altera Monitor Program. Although there are no marks given for this part, the knowledge gained here is necessary for the second part (and the rest of the labs). In the second part, you will use a different assembly source file which you will have to modify in order to run it correctly and to implement additional functionality.
+
+PART I: Compile and run an existing assembly code (0 marks)
+In Windows Explorer or My Computer, go to your w: drive.
+Create a folder to keep all your labs together (called desl for example), and then create a folder within that called lab1. Within the lab1 folder, create another folder, test1
+Download the program leds_7segs.s (or leds_7segs_advanced.s which accomplishes the same task but uses more advanced assembly programming), which is code for a simple test program. Save the file in the test1 directory, from above.
+DE2
+Power on the power supply (the box in the top-left corner of the picture above) by pressing the white button on its front side (sometimes a switch on the back) and power on the DE2 board (press the red button on its top-left corner).
+Open the Monitor Program and create a New Project. Choose the test1 folder you created above, and name the project test1.
+Choose the DE2 Media Computer as your system, and click next.
+Choose "Assembly Program". Click next.
+Click the "Add..." button, and then select the leds_7segs.s file you downloaded.
+Change the start symbol from _start to main.
+For all remaining pages, leave the default options as they are.
+Click "Finish".
+Click "Yes" when asked if you want to download the system to the board.
+When the system has been downloaded, select Compile from the "Actions" menu.
+When compilation has completed, select Load from the "Actions" menu.
+Select Continue from the "Actions" menu to start the program. You should see the red and green LEDs advancing from right to left, while a count (in hex) increments on 4 of the 7-segment displays.
+More information on the compiling you just did
+When we selected Compile and Load from the "Actions" menu, a number of commands were performed for us. The flow of commands is as follows:
+
+Compilation process
+As illustrated, there are 3 main steps. You can observe them in the "Info & Errors" window.
+
+The assembly source file is first processed by the assembler. The assembler parses your source file, checks it for syntax errors, and translates it into its equivalent binary form. We say that a file is "binary" when it contains some bytes that have values other than the ones used to represent characters that you can type on your keyboard.
+The linker pastes all the object files together grouping their data and code sections to form an executable program. The linker also takes care of "resolving symbols", i.e., matching by name ("symbol") the location of code or data when used in one file to their definition (usually labels made .global) in another object file. The linker thus makes it possible for you to write a function foo and call that function from a different source file by name (call foo) rather than by location (call +0x13c). In the future, if you ever encounter a compilation error stating that there is an "Unresolved symbol X", you will know that there is a reference to the X symbol in your code, but the linker cannot find the definition of that symbol in the object files that it is linking together.
+The executable file contains data and instructions that are encoded specifically for the Nios II processor. To execute it, we need to upload it the memory of the Nios II system on the DE2 board. Once this is done, the executable runs on the Nios II processor independently of your computer.
+The process we just described to generate executables is very similar to the one you can find on a GNU/Linux system, as Altera modified the GNU utilities to create their own. For this reason, most utilities will be very similar in both systems. Since the GNU tool-chain is well documented on the web, you can find a lot of relevant information by searching, for example, for the GNU Linker.
+
+More information on the program you just ran
+In this section, we examine the difference between the assembly source code and the machine code.
+
+Listing of a program
+Take a look at the source code of the program you just ran by opening leds_7segs.s in Notepad++ or another text editor. You will obtain an output in the following format:
+
+Sample code
+This program, typed by a human, is meant to be converted to an executable program by the assembler software. The components of a program as shown in the figure above are:
+
+Directives are statements that give information or commands to the assembler. Directives are not translated into executable code. There exists a number of directives. The most important ones are
+.global symbol
+makes "symbol" visible to the linker. In this case, the main function is the entry point of our program, so we need to make the main a global symbol. Equally important is:
+.equ NAME, VALUE
+that tells to assembler to replace all instances of the word "NAME" in the source code by the value "VALUE". This directive allows you to create a name for a constant so that you only have to edit one line if you ever have to change the value of a particular constant used in many locations of the source code.
+Labels are names given by the programmer to memory locations. Labels allow the programmer to reference the location of instructions or data by name (instead of address). A label is not an executable statement and the address that it references is the address of the immediately following instruction or data item in the source code. A label must be followed immediately by a colon (":").
+Instructions are converted into executable instruction words by the assembler. Instruction words are composed of one opcode and a number of operands. Since the Nios II is a RISC machine (Reduced Instruction Set Computer), only the "load-from-memory" and "store-to-memory" instructions have a memory address as one of their operands. All the other instructions use immediates (i.e. constants) or registers as parameters. By convention, the destination register, where applicable, is the first register in the list of operands. For example,
+add r3,r1,r2
+means that register r3 is assigned the value equal to the sum of the values contained in registers r1 and r2. There are also pseudo-instructions that look like assembly instructions but are implemented by the assembler using one or more other real opcodes. Pseudo-instructions make the programmer's life easier by making the code more legible, and sometimes by saving the programmer some typing. For example,
+mov r2, r1
+copies the value of register r1 to register r2. This is implemented by the assembler as:
+add r2, r1, r0
+because the r0 register is hard-wired to the value 0.
+Comments are remarks that document your program, allowing you or someone else to quickly understand what a line of code is doing. A comment should be found on most program lines. A single-line comment starts with #. A block comment starts with /* and ends with */.
+You will find an extensive description of the supported syntax of assembly in the "Syntax" section of the the GNU Assembler guide. In particular, it will be useful for you to know in the future that you can enter constants in assembly in their decimal, binary, octal or hexadecimal representation.
+
+Disassembly of a program
+The Nios II processor executes instruction one by one in the order specified in the program. The program is a binary file consisting of machine code representing instructions and some metadata. The assembler will convert each instruction of the source code into one machine-executable instruction, except for movia, the only pseudo-instruction that the assembler converts into two machine-executable instructions. Except movia, there is a one-to-one correspondence between the machine code and the source code, so it is possible to "disassemble" a machine code instruction into its corresponding assembly code. The Monitor Program displays the disassembly of leds_7segs.s in its disassembly window, with the following format:
+
+Altera Monitor Disassembly
+Notice how the label has no address of its own; it refers to the address of the immediately following instruction in the executable. The addresses and machine codes are given in hexadecimal. In the Nios II instruction set, all instructions are 32 bits in length. This explains why addresses of consecutive instructions are separated by a distance of 4 bytes (32 bits). Compare this output with the original source program. Observe how the movia pseudo-instruction is converted into a orhi and a ori and observe the one-to-one matching of some other instructions. Notice also how the constants defined with an .equ directive (such as ADDR_GREENLEDS) have been replaced by their numerical value in the machine code. Finally, notice that there are instructions in the disassembly that were not in the source code. The Monitor Program tries to disassemble the contents of memory, whether the values came from your source code, your data, or even random values.
+
+PART II: Modify an existing assembly program (1 mark)
+Create a new directory in your lab1 folder, called test2. Create a text file called test.s in that folder and copy the following assembly code into it:
+
+.equ RED_LEDS, 0x10000000
+
+/* List of registers utilized:
+r2: pointer in array                 r6: index in the array
+r3: value displayed                  r7: temporary register
+r4: address of LEDs                  r9: counter in delay loop
+r5: length of the array                                        */
+
+array:
+.byte 1
+.byte 2
+.byte 3
+.byte 4
+
+.global main
+main:
+movia r4,RED_LEDS  /* Get address of LED device */
+movia r2,array     /* Get address of array */
+movi r3,0          /* initialize value displayed */
+movi r6,0          /* initialize counter */
+movi r5,4          /* set length of the array */
+
+LOOP:
+bge r6,r5,amin     /* test for end of array */
+
+ldb r7,0(r2)       /* load digit from array */
+or r3,r3,r7        /* insert character in string of digits */
+stwio r3,0(r4)     /* write to the red LEDs /
+addi r2,r2,1       /* increment address */
+slli r3,r3,4       /* shift string to the left */
+
+addi r6,r6,1
+
+movia r99,10000000 /* set starting point for delay counter */
+
+DELAY:
+subi r9,r9,1       # subtract 1 from delay
+bne r9,r0, DELAY   # continue subtracting if delay has not elapsed
+br LOOP            # delay elapsed, redo the LOOP
+
+This program should light up the binary representation of numbers (1, 2, 3, and 4) on the red LEDs (using 4 LEDs per digit), then scrolls to the left until the first digit reaches the 4th position. The process then repeats.
+
+
+
+Create a new project with this file in the Monitor Program, and compile it.
+The assembler will report errors; try to fix all of them until your program is successfully assembled. Make sure you fix any warnings as well (this code should not produce any warnings). Do this on your own and try to understand the compiler's error messages. ONLY IF YOU GET STUCK click below to see how to fix the above code (but again, you are highly discouraged from doing so - try it on your own). After it compiles, there is still a bug in the program! Compare your code to the disassembly output (see above). Also, try to use the single step functionality of the Monitor Program to find the bug. If you can't, click here :(
+Modify your code to use only 3 bits to represent each digit, and then extend the array with digits 5 and 6. Scroll all 6 digits across the 18 red LEDs.
+Enhance the previous step so that, rather than setting the LEDs back to all zeros, they keep going. When the 1 digit reaches the far left, it reappears on the right, but 2 through 6 continue shifting normally, so that 2 moves to the far left, and so on.
+Quiz (1 Mark)
+Be prepared to answer questions about the Altera Monitor Program, about the compilation process that happens underneath, and about the assembly language basics. The following are some of the things that you should know by the end of this lab:
+
+Examine code in the Disassembly window of the Monitor Program
+Examine and change contents of registers in the Registers window
+Examine and change memory contents in the Memory window
+Set breakpoints at machine instruction addresses
+Single step (F2) vs. Continue (F3)
+Looking up instructions in the Nios II Instruction Set Reference

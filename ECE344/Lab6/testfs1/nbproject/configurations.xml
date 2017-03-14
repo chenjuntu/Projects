@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="97">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <logicalFolder name="SourceFiles"
+                   displayName="Source Files"
+                   projectFiles="true">
+      <logicalFolder name="fs" displayName="fs" projectFiles="true" root="..">
+        <itemPath>../bitmap.c</itemPath>
+        <itemPath>../bitmap.h</itemPath>
+        <itemPath>../block.c</itemPath>
+        <itemPath>../block.h</itemPath>
+        <itemPath>../common.c</itemPath>
+        <itemPath>../common.h</itemPath>
+        <itemPath>../dir.c</itemPath>
+        <itemPath>../dir.h</itemPath>
+        <itemPath>../file.c</itemPath>
+        <itemPath>../inode.c</itemPath>
+        <itemPath>../inode.h</itemPath>
+        <itemPath>../list.h</itemPath>
+        <itemPath>../mktestfs.c</itemPath>
+        <itemPath>../read_write.c</itemPath>
+        <itemPath>../read_write.h</itemPath>
+        <itemPath>../super.c</itemPath>
+        <itemPath>../super.h</itemPath>
+        <itemPath>../testfs.c</itemPath>
+        <itemPath>../testfs.h</itemPath>
+      </logicalFolder>
+    </logicalFolder>
+    <logicalFolder name="TestFiles"
+                   displayName="Test Files"
+                   projectFiles="false"
+                   kind="TEST_LOGICAL_FOLDER">
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>/homes/c/chenjunt/ece344/fs/Makefile</itemPath>
+      <itemPath>../testfs</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceRootList>
+    <Elem>..</Elem>
+  </sourceRootList>
+  <projectmakefile></projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>false</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <flagsDictionary>
+        <element flagsID="0" commonFlags="-g"/>
+      </flagsDictionary>
+      <codeAssistance>
+      </codeAssistance>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>/homes/c/chenjunt/ece344/fs</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
+          <executablePath>../testfs</executablePath>
+        </makeTool>
+        <preBuild>
+          <preBuildCommandWorkingDir>.</preBuildCommandWorkingDir>
+          <preBuildCommand></preBuildCommand>
+        </preBuild>
+      </makefileType>
+      <item path="../bitmap.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="../block.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="../common.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="../dir.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="../file.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="../inode.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="../mktestfs.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="../read_write.c" ex="false" tool="0" flavor2="2">
+        <cTool flags="0">
+          <preprocessorList>
+            <Elem>_FILE_OFFSET_BITS=64</Elem>
+            <Elem>_GNU_SOURCE</Elem>
+          </preprocessorList>
+        </cTool>
+      </item>
+      <item path="../super.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="../testfs.c" ex="false" tool="0" flavor2="2">
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>

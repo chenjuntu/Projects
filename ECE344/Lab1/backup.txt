@@ -1,0 +1,115 @@
+Tid
+thread_yield(Tid want_tid)
+{
+    //If this function is asked to yield to itself.
+    if(want_tid == THREAD_SELF)
+        return thread_id();
+    //If this function is asked to yield to any thread that is on the ready queue.
+    else if(want_tid == THREAD_ANY)
+    {   
+        struct thread* Head;
+        Head = Ready_queue;
+        //First, check if there exists other threads that can be yielded to.
+        if(Ready_queue == NULL)
+            return THREAD_NONE;
+        else
+        {
+            int err;
+            int setcontext_called = 0;
+            err = getcontext(&(Current_thread->mycontext));
+            assert(!err);
+            //This if statement is for when the thread is yielding back.
+            if (setcontext_called == 1) 
+            {
+                return want_tid;
+            }
+            //Store the current thread into the ready_queue.
+            while(Head->Next != NULL)
+                Head = Head->Next;
+            Head->Next = Current_thread;
+            Current_thread->Next = NULL;
+            Head = Ready_queue;
+            //There exists at lease one thread that is in the ready_queue. Therefore we choose the head of ready_queue to yield.
+            Ready_queue = Ready_queue->Next;
+            Head->Next = NULL;
+            Current_thread = Head;
+            //Now we do the switching thread job.
+            setcontext_called = 1;
+            call_setcontext(&(Head->mycontext));
+        }
+    }
+    //If this function is asked to yield to one specific thread.
+    else
+    {
+        int Found = 0;
+        struct thread* Current;
+        struct thread* Temp;
+        Current = Ready_queue;
+        Temp = Ready_queue;
+        //First we have to check if the identifier is valid or not.
+        if(want_tid < 0 || want_tid > THREAD_MAX_THREADS-1)
+            return THREAD_INVALID;
+        while(Current != NULL)
+        {
+            //If we found the thread we want, we mark the "Current" pointer to it, and signal the "Found" to be true.
+            if(want_tid == Current->ID)
+            {
+                Found = 1;
+                break;
+            }
+            //Else we continue to next thread in the Ready_queue.
+            else
+                Current = Current->Next;
+        }
+        //If the Thread is not in the ready queue, return INVALID.
+        if(Found == 0)
+            return THREAD_INVALID;
+        //Here is the situation that we found the correct thread to yield, and that thread is pointing by the "Current" pointer.
+        else
+        {
+            int setcontext_called = 0;
+            int err;
+            err = getcontext(&(Current_thread->mycontext));
+            assert(!err);
+            //This if statement is for when the thread is yielding back.
+            if (setcontext_called == 1) 
+            {
+                return want_tid;
+            }
+            //Store the current thread into the ready_queue.
+            while(Temp->Next != NULL)
+                Temp = Temp->Next;
+            Temp->Next = Current_thread;
+            Current_thread->Next = NULL;
+            Temp = Ready_queue;
+            //Remove the thread from Ready_queue.
+            //first case, if the head of the ready_queue is the thread we want.
+            if(Ready_queue->ID == want_tid)
+                {
+                    Ready_queue = Temp->Next;
+                    Temp->Next = NULL;
+                    Current_thread = Temp; //Temp and Current are pointing to the same thing.
+                }
+            else
+            {
+                while(Temp->Next != NULL)
+                {
+                //This is the case that the thread is in middle of the list. Now "Current" and "Temp->Next" point to the same thing.
+                    if(Temp->Next->ID == want_tid)
+                    {
+                        Temp->Next = Current->Next;
+                        Current->Next = NULL;
+                        //Remove it from the ready_queue.
+                        Current_thread = Current;
+                        break;
+                    }
+                    else
+                        Temp = Temp->Next;
+                }
+            }
+            //Do the switching function here.
+            setcontext_called = 1;
+            call_setcontext(&(Current->mycontext));
+        }
+    }
+}

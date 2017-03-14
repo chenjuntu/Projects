@@ -1,0 +1,76 @@
+Lab 4: Parallel Port and Timer
+
+Description
+Preparation (2 marks)
+In Lab (2 marks)
+Quiz (1 mark)
+Description
+In this lab you will learn how to use the Parallel Interface (JP1/JP2 connectors on the DE2 board) to communicate with another piece of hardware, called the Lego controller. The Lego controller connects to motors and sensors that physically integrate with the classic children's Lego kits. You will also learn how to use the Timer peripheral on the DE2 computer, so that you can create known and precise delay intervals.
+
+You will build a self-balancing device made from Lego which will be controlled by the Lego controller and the DE2 Nios II processor. In Part 1 of this lab you will implement a basic balancing algorithm to read the sensors and control the motor. In Part 2 you will improve your algorithm by slowing down the motor. This involves using the timer to implement a technique called Pulse Width Modulation (PWM).
+
+Self-Balancing Device Description
+The Balancing Device Construction Manual describes how you can build the self-balancing device shown in the figure below. The device consists of a frame and a Lego motor balanced on a single axle with two wheels. In addition, at each end of the frame there is a Lego sensor that faces towards the ground. Each sensor measures its distance from the ground based on the reflection of a built-in LED. The closer the sensor is to the ground, the more light it senses, and the higher the value it reports. By examining the values of both sensors, the device can determine if it is tilting in one direction or another. The goal of the lab is to receive this information, and determine how much to roll the device, using the motor, in the direction that will correct that tilt.
+
+Self-Balancing Device
+Part 1
+In Part 1 you will write an assembly program that will read the values of the two sensors. If the values of the sensors indicate the device is tilting, you should drive the motor either clockwise or counterclockwise, so that the device rolls in the direction that will correct that tilt. Otherwise, if the sensor values indicate the device is not tilting, you can turn off the motor. One decision you will have to make in the design of your program is how much of a tilt (in either direction) the device should tolerate before it tries to correct it. You are encouraged to experiment with different levels of tolerance and choose one that seems to work the best.
+
+The Lego Controller Device Documentation describes how you can control the motors and read the sensor values. As described in that document, the sensor interface works either in value mode or state mode. For this lab, use the value mode of the sensor interface.
+
+Notes
+Be careful to not set the motor to always-off when reading the sensors. Doing so will result in the motor being off most of the time. (Why?)
+Setting the direction bit to 0 for a motor does not always mean clockwise rotation. The direction of rotation depends on the polarity of the connection, i.e., which way it is plugged in. The easiest way around this is to guess which binary value corresponds to clockwise rotation, then test your program and if your guess was wrong simply flip the connector on the motor.
+Be careful when you test your device and make sure the motor behaves the way you expect it to. If you guessed the direction bit wrong or there is an error in your code, the device could drive off in one direction.
+Not all sensors are identical. It is likely that your two sensors will report two slightly different values when placed the same distance from the same surface. You can assume the sensors are identical when you write your code, but be prepared to modify your code after you test your two sensors.
+When you read from a sensor, make sure the corresponding Sensor Ready bit is low, or else the value you read will be invalid.
+Part 2
+Once you test your code from Part 1, you will see that your device is not able to achieve a perfect balance. Instead it rapidly oscillates back and forth. This is because the motor is much stronger than we want it to be, which causes it to "overcompensate" when trying to correct a tilt. We now want to reduce the strength of the motor to remove this "overcompensation" so that your device will be able to balance itself.
+
+Without making any physical changes to your Lego setup, you will slow down/weaken the motor by using a technique called Pulse Width Modulation (PWM). The idea is to turn the motor on and off rapidly to reduce the average motor power. You will do this by repeatedly turning the motor on for X cycles and then off for Y cycles.
+
+You will use the Timer peripheral to accurately time the X and Y cycles. Although this could be done using program-based delay loops, to receive any marks you are required to use the timer as described here. Write a Nios II assembly language subroutine that, when called with a parameter, N, waits for N Timer cycles before returning, using the timer peripheral. Incorporate this subroutine into your code for the Part I program to implement the pseudo-code described below. This must be a proper subroutine (call, return, parameter passing, etc.)
+
+/* NOTE: This is meant as pseudo-code, you are to use assembly */
+  Turn Motor ON
+  Delay 50000 cycles using the Timer
+  Turn Motor OFF
+  Delay 50000 cycles using the Timer
+The pseudo-code uses a 50% duty cycle (X=50000, Y=50000). This is a good starting point but you are encouraged to experiment with different values of the duty cycle (X/(X+Y)) to change the strength of the motor.
+
+The ultimate goal of this lab is for your device to be able to balance itself perfectly on its two wheels as quickly as possible.
+
+Preparation (2 Marks)
+There is quite a bit to learn and do in this lab. You should do the following things as part of your preparation:
+Read the following documents to learn how to interface with both the Lego controller and the timer:
+Lego Controller Device Documentation
+Timer Documentation
+These documents also include a sample assembly code that demonstrates how to properly use the Lego controller and the timer. You are allowed to reuse this code, but you must understand it. For help on how to read the documentation you may wish to consult the Device Documentation Template.
+Answer the following questions, assuming the Lego controller is plugged into JP1:
+To properly configure the Lego controller I have to write the value ________ to the direction register, which is located at address ________.
+To turn on motor 2 I have to set bit ___ at memory location ________ to the value ___.
+a) To enable sensor 1 for reading I have to write the 32-bit value ________ into address _______. By doing so, I will also implicitly turn motor 2 ___. 
+b) Then to check if sensor 1 is giving a valid data I have to read bit ___ from address _______ and test if the bit has the value ___. 
+c) Then to read the value of sensor 1, I have to read bits ___ to ___ from address _______.
+Answer the following questions about the Timer:
+Does the timer count up or down?
+How do you initialize the timer's period?
+In the previous clock cycle, you executed a Nios II instruction which started the timer with a period of 50000. When does the next Nios II instruction begin to execute? (HINT: think of how you figure out whether the timer has timed out)
+How do you read the timer's current value? (HINT: you have to take a "snapshot" before reading)
+How can you check if the timer has completed its period?
+Write both assembly language programs described above. Your code must be well commented. Compile your code using the Altera Monitor program and fix any compilation errors.
+Build the balancing device from the Lego provided in your Lego kit and following The Balancing Device Construction Manual.
+In Lab (2 Marks)
+Demonstrate both your working programs (separately) to your TA. Don't forget to submit your code.
+Tips
+Assembly programs need to initialize the stack pointer to a usable location in memory. In Lab 3, the start-up code in the C library did this for you.
+Make sure to .include nios_macros.s. You are likely to hit the movia bug in this lab and will need the correct definition of movia found in nios_macros.s.
+Place the device on a light-coloured surface, this will help the sensors measure distance more accurately.
+Operate the device on a uniformly coloured surface, since the value reported by the sensors changes with the colour of the surface.
+Don't forget to correctly set the direction register for the Lego Controller.
+Make sure the Lego controller is connected to the same 40 pin expansion header (JP1 or JP2) that you use in your program.
+When you try to run your program make sure the slider switch on the Lego controller is in the middle position.
+To work with individual bits of a byte, use the bitwise AND and OR operations.
+Remember to use the I/O versions of load/store assembly instructions (e.g., ldwio, stwio) when you are reading/writing from/to an I/O peripheral.
+Quiz (1 Mark)
+Be prepared to answer any questions about your code, and about how the Lego motors, the sensors and the timer work.

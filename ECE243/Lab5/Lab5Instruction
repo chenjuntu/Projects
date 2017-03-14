@@ -1,0 +1,143 @@
+Lab 5: Polled I/O
+
+Description
+Preparation and Quiz (3 marks)
+In Lab (2 marks + 1 bonus mark)
+Notes
+Description
+In this lab you will use the polling concept for a JTAG UART (Universal Asynchronous Receiver/Transmitter that sends data over the JTAG programming cable) to control a simple game. To poll a device is to actively and continuously check its status to see if it is ready to be used in some way.
+
+We will provide the Car World game which will be run on a PC. In this game, a car is driven around a race track in order to finish laps as fast as possible without driving off the track. Your task is to write a Nios II assembly program that will control the car (without human intervention). The program that you write will be run by the Nios II and it will communicate with the Car World game over the JTAG UART. Your program can query the state of the sensors, speed of the car, and current position on the map. Your program must then send acceleration and steering commands to drive the car.
+
+Car World on PC controlled by DE2
+The Car World Game
+The goal of the Car World game is to guide the car around the track, trying to complete laps as quickly as possible. If the car drives off the track, or if F3 key of the PC keyboard is pressed, the car will reset to the starting point of the track. Below is a screenshot of the default view of the Car World game (on the left), as well as a screenshot of an alternative view (on the right), accessible through pressing F2 key of the PC keyboard.
+
+Main view turningSecondary view turning
+The car has five sensors in front. These sensors indicate whether the car is approaching the edge of track. For example, on the screenshots above, the leftmost sensor (coloured red) is reporting that it is currently off the track, while the other four sensors (coloured green) are reporting that they are on the track. Your assembly program will need to read the state of these sensors in order to make an informed decision on moving the car. Besides the sensor values, you can also read the current speed of the car, as well as its current position (x, y, and z coordinates).
+
+To move the car you need to inform the Car World game of the desired steering and the acceleration. The text in the Car World window reports the current status of the car to help in debugging your program. To summarize, you are to write a Nios II assembly program that will continuously:
+
+Poll the sensors, speed and position data from the game,
+Process the collected data
+Adjust the steering and acceleration to keep your car moving at a reasonable speed without driving it off the track.
+Your assembly program only needs to be able to drive the car so it eventually completes a lap. For example, you might start with a program that will set the initial car speed to a certain value and then continuously adjust the angle of the tires to keep the car on the track. To set the initial speed, you can set the acceleration to be positive for a short time and then set the acceleration to zero. Notice that with this approach you do not need to use the position data (x, y, and z coordinates).
+However, bragging rights will be given to groups that achieve best lap times. Hence, try to optimize your code and have some fun while doing it!
+
+The JTAG UART for User I/O
+To establish communication between the Car World game and Nios II, you will be using a JTAG-based UART. A UART in general is a device which translates between parallel (many bits at a time) communication to serial (one bit at a time) communication. UARTs are often built for other serial standards such as RS-232 (e.g., "serial port"). In this lab, we will transfer data over the programming cable to avoid using a second cable. JTAG (Joint Test Action Group) is a standard interface often used for programming and debugging chips, and is used by the DE2's USB-Blaster programming. We will also use it for communicating between the Nios system and the PC.
+
+The documentation of the JTAG UART can be found here. As listed in the documentation, bit 15 of the Data Register is a "data valid" bit. To see if data is ready to be received from the UART, one can continually poll the valid bit in a loop, and when it is valid, branch to code that handles the received data. To determine when new data can be written to the UART, one can continually, in a loop, check the available write buffer space in the Control Register[31:16]. When it is non-zero, there is room for more data to be sent to the UART.
+
+How to Communicate with the Car World Program
+The JTAG UART documentation mentioned above describes how to receive or send bytes of data. Now we proceed on describing the actual communication protocol for the Car World program that you will have to obey in order to communicate with the game.
+
+The communication protocol for the Car World program consists of reading and writing packets of data over the JTAG UART. A packet that consists of multiple bytes must be read/written from/to the JTAG UART one byte at a time, and you must implement polling for each packet byte, as discussed above. The first byte of every packet is always the packet type. Packet types range from 0 to 5 and are in details described below. The packet length depends on the type of packet being sent.
+
+Transmit packet types
+There are in total 4 transmit packet types. These packets are sent by your program running on the Nios II to the Car World game.
+
+Request sensor and speed data Packet 2
+To get the current state of the sensors and car's speed, send a one-byte command with value 0x02. The Car World game will respond by sending the sensor and speed data packet, described below.
+
+Request position data Packet 3
+In order to get car's position, send a one-byte command with value 0x03. The Car World game will respond by sending the position data packet, described below.
+
+Change acceleration Packet 4
+To change the acceleration of the car, you must send a two-byte command to Car World. The first byte (command type) is 0x04, while the second byte should be the desired acceleration formatted as a 8-bit signed number. The acceleration ranges from -127 (full deceleration) to +127 (full acceleration ahead). It is important to note that an acceleration of 0 does not mean that the car will not be moving; rather, the car will continue to move at its current speed. If the speed reaches zero and you continue to apply a negative acceleration, the car will start moving in reverse. Unlike for the previous two packet types, the Car World game sends no response on receiving a packet of this type.
+
+Change steering Packet 5
+Similarly, to change steering, you must send a two-byte command. The first byte (command type) is 0x05, while the second byte should be the desired angle formatted as a 8-bit signed number. The angle of the tires range from -127 (hard left turn) through 0 (straight ahead) to +127 (hard right turn). The Car World game sends no response on receiving a packet of this type.
+
+Received packet types
+There are 2 packet types that are sent by the Car World game as a response to transmit packet types described above.
+
+Sensor and speed data Packet 0
+On receiving a packet of type 0x02, the Car World game sends 3 bytes to the JTAG UART. The first byte is 0x00, while the other two bytes represent the current value of sensors and the current speed of the car, respectively. The layout of sensor data is shown above. "On the track" sensor state is indicated by a value of 1 and "off the track" state is indicated by a value of 0. For example, the value of the sensor data in the screenshots shown earlier is 0x1e.
+
+The speed is an 8-bit unsigned number, ranging from 0 (stopped) to 255 (full speed). Note that this is not the velocity of the car, as it only describes how fast the car is moving and not in what direction the car is moving.
+
+Position data Packet 1
+A position data packet consists of 4 bytes, and it is sent by the Car World game as a response to a packet of type 0x03. The first byte is 0x01, while the remaining 3 bytes are 8-bit signed numbers representing x,y, and z coordinates, respectively. You are not required to use position data but they may be useful for completing the hard and extreme tracks discussed below.
+
+Pseudo-code example
+Below is a snippet of pseudo-code showing two subroutines for reading sensor and speed data and adjusting the tires angle.
+
+READ_SENSORS_AND_SPEED:
+  poll JTAG UART for writing
+  write 2 to the JTAG UART (request sensors/speed)
+
+  # Read response (Suggestion: Put this in a function)
+  poll JTAG UART for reading
+  read JTAG UART
+  check that data read is 0
+  poll JTAG UART for reading
+  read sensor states from JTAG UART
+  poll JTAG UART for reading
+  read current speed from JTAG UART
+
+  # Decide what to do
+  if sensors are 0x1f
+    call SET_ANGLE to steer straight
+  else if sensors are 0x1e
+    call SET_ANGLE to steer right
+  else if sensors are 0x1c
+    call SET_ANGLE to steer hard right
+  else if sensors are 0x0f
+    call SET_ANGLE to steer left
+  else if sensors are 0x07
+    call SET_ANGLE to steer hard left
+  else
+    hope this doesn't happen
+  return
+
+SET_ANGLE:
+  poll JTAG UART for writing
+  write 5 to the JTAG UART (set steering)
+  poll JTAG UART for writing
+  write new angle to the JTAG UART
+  return
+Lab Setup
+Please download the Lab 5 Car World package and unpack it. To start the game, ensure the DE2 is plugged in and powered on, then double click on the car_world.bat. This will:
+Download a modified DE2 Media Computer system onto the DE2 board. (Needed for the non-standard JTAG UART used here)
+Start the Car World game and establish the connection with the JTAG UART on the DE2 board.
+Create a new Altera Monitor project. When selecting a system, please choose <Custom System>, and specify the nios_system.sopcinfo file provided in the directory lab5_carworld/de2_car_world_system directory, as show in the figure below. Leave all the other fields blank. Alter Monitor Custom System
+For program type, specify the Assembly Program type, and then add the assembly file you wrote that will control the Car World game. Set the start offset for .text and .data sections to 0x400 (You'll need this for Lab 6).
+
+To do these steps outside of DESL labs, besides having Altera Quartus and Altera Monitor program installed, you will need the DE2 board attached to your computer via a USB cable. If you don't have the DE2 board at home, you still must write the required Nios II assembly code and ensure that it at least compiles. For this, skip the first step and just compile your code after completing step 2.
+
+Preparation and Quiz (3 marks)
+Read the documentation on the JTAG UART.
+Write answers to the following questions:
+What is the meaning of a sensor reading of 0x00?
+You have sent the Car World game two bytes: 0x05 followed by 0x9C. What is the meaning of this information?
+What bytes would you write to the JTAG UART in order to apply maximum acceleration?
+Write the assembly code that will guide the car around a track. Don't forget to comment your program, and use functions to keep your code organized!
+Be prepared to explain
+
+Memory-mapped devices
+How to use the JTAG UART
+How polling works
+In Lab (2 marks + 1 bonus mark)
+Demonstrate your working game. In the directory lab5_carworld/carworld/data/Landscape there are multiple tracks labelled for various difficulty levels (easy, medium, hard, and extreme). To change a track:
+
+If you are currently running your assembly code in the Altera Monitor Program, select Actions/Disconnect.
+Close all the windows opened by the car_world.bat
+Go to directory lab5_carworld/carworld/data/Landscape and copy the desired track file over the file landscape.txt. For example, copying landscape_medium_hill_valley.txt over landscape.txt will switch to the medium track.
+Run car_world.bat again and select Action/Load option in the Altera Monitor program.
+You will receive:
+1.5 mark for completing a lap on any one of the easy tracks
+0.5 mark for completing a lap on the medium track
+1 bonus mark for completing a lap on the landscape_hard_hill_valley track under 48 seconds. Current rankings here!
+To complete the easy tracks, the basic approach of just setting the initial speed of the car will suffice. However, due to the surface friction, the car will be slowing down, so you will probably want to adjust the speed accordingly. Moreover, the medium, hard and extreme tracks have hills which will slow down or speed up the car due to gravity, and your program will have to take this into account.
+
+Your TA will record your best lap time on landscape_hard_hill_valley. Don't forget to submit your code.
+
+Notes
+Unsure if applicable in 2015: If Car World gives an error about "connect() failed" or "Cannot open socket for JTAG UART", try running Car World from another drive than W: (e.g., X:). The cause is still unknown.
+Read and write byte and their associated polling loops are used frequently. It is a good idea to write these as subroutines to reduce duplicated code.
+Car World game commands: F2 to cycle through different viewpoints, F3 to reset the car to the starting point of the track.
+While debugging, you may want to occasionally reset the communication between the Car World game and your assembly program (that is, empty both the receive and send JTAG UART buffers). Doing this takes two steps:
+Have your assembly code send byte 0x00 to the JTAG UART in case Car World is waiting for a multi-byte packet. Car World treats excess 0x00 commands as a no-op.
+In the Altera Monitor program, select the Memory tab, go to the memory address 0x10001020, check the Query All Devices check-box and click the Refresh Memory button. Then uncheck the check-box. This is equivalent to reading the UART receive FIFO data until the FIFO is empty.
+It may be convenient to write a reset subroutine and run it at the beginning of your program.

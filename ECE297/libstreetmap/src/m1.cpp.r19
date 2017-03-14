@@ -1,0 +1,387 @@
+#include "m1.h"
+#include <unordered_map>
+#include "StreetsDatabaseAPI.h"
+#include "LatLon.h"
+#include "StreetSegmentEnds.h"
+#include <iostream>
+
+
+#include <cmath>
+using namespace std;
+
+
+#include "StreetsDatabaseAPI.h"
+#include <iostream>
+
+//load the map
+unordered_map<string,unsigned> intersectionTable;
+unordered_map<string,unsigned> streetTable;
+unordered_map<string,vector<unsigned>> SegmentsOfStreet;
+unordered_map<unsigned,vector<unsigned>> intersection_segment_table;
+unordered_map<unsigned,vector<string>> intersection_street_table;
+unordered_map<string,vector<unsigned>> adjacent_intersection_table;
+unordered_map<unsigned,double> segment_length_table;
+unordered_map<string,vector<unsigned>> street_intersection_table;
+
+
+bool load_map(std::string map_name) {
+
+    bool load_success = loadStreetDatabaseBIN(map_name);
+    unsigned number = getNumberOfIntersections();
+    unsigned count;
+    for(count = 0; count<number; count++){
+        intersectionTable.insert(make_pair(getIntersectionName(count),count));
+    }
+   
+    number = getNumberOfStreets();
+    for(count = 0; count<number; count++){
+        streetTable.insert(make_pair(getStreetName(count),count));
+    }
+    
+    number = getNumberOfIntersections();
+    for(count = 0; count<number; count++){
+        vector<unsigned> segments = find_intersection_street_segments_Helper(count);
+        intersection_segment_table.insert(make_pair(count,segments));
+    }
+    
+    number = getNumberOfIntersections();
+    for(count = 0; count<number; count++){
+        vector<string> streetNames = find_intersection_street_names_Helper(count);
+        intersection_street_table.insert(make_pair(count,streetNames));
+    }
+    
+    number = getNumberOfIntersections();
+    for(count = 0; count<number; count++){
+        string name = getIntersectionName(count);
+        vector<unsigned> adjacent = find_adjacent_intersections_Helper(name);
+        adjacent_intersection_table.insert(make_pair(name,adjacent));        
+    }
+    
+    number = getNumberOfStreetSegments();
+    for(count = 0; count<number; count++){
+        segment_length_table.insert(make_pair(count,find_street_segment_length_Helper(count)));
+    }
+    
+    /*number = getNumberOfStreets();
+    for(count = 0; count<number; count++){
+        string name = getStreetName(count);
+        //vector<unsigned> intersections = find_all_street_intersections_Helper(name);
+        //find_all_street_intersections_Helper(name);
+        //street_intersection_table.insert(make_pair(name,intersections));
+    }*/
+    
+    load();
+    load_street_intersection();    
+    
+    return load_success;
+}
+
+void load(){
+    unsigned number = (unsigned)getNumberOfStreets();
+    
+    unsigned segmentNumber = (unsigned)getNumberOfStreetSegments();
+    unsigned count;
+    vector<unsigned> empty;
+    for(count = 0;count<number;count++){
+        string name = getStreetName(count);
+        SegmentsOfStreet.insert(make_pair(name,empty));
+        
+    }
+    for(count = 0; count<segmentNumber;count++){
+        string name = getStreetName(getStreetSegmentStreetID(count));
+        (SegmentsOfStreet.find(name)->second).push_back(count);
+        
+    }
+}
+
+
+void load_street_intersection(){
+    unsigned number = (unsigned)getNumberOfStreets();
+    
+    unsigned intersectionNumber = (unsigned)getNumberOfIntersections();
+    unsigned count;
+    vector<unsigned> empty;
+    
+    for(count = 0;count<number;count++){
+        string name = getStreetName(count);
+        street_intersection_table.insert(make_pair(name,empty));
+    }
+    
+    for(count = 0;count<intersectionNumber;count++){
+        unsigned segmentNumber = getIntersectionStreetSegmentCount(count);
+        unsigned i;
+        for(i = 0; i <segmentNumber; i++){
+            string streetName = getStreetName(getStreetSegmentStreetID(getIntersectionStreetSegment(count,i)));
+            
+            unsigned added= street_intersection_table.find(streetName)->second.size();
+            
+            bool repeated = false;
+            if(street_intersection_table.find(streetName)->second.size() != 0){
+            if(street_intersection_table.find(streetName)->second[added-1] == count){
+                repeated = true;
+            }
+            }
+            if(!repeated){
+                (street_intersection_table.find(streetName)->second).push_back(count);
+            }
+        }
+    }
+}
+
+//close the map
+void close_map() {
+    closeStreetDatabase();
+    return;
+    // destroy any d         
+}
+
+//implement the rest of the functions provided in m1.h
+
+// ...
+
+
+unsigned find_intersection_id_from_name(std::string intersection_name){
+    return intersectionTable.find(intersection_name)-> second;
+
+}
+
+unsigned find_street_id_from_name(std::string street_name){
+    return streetTable.find(street_name) -> second;
+}
+
+
+std::vector<unsigned> find_intersection_street_segments(std::string intersection_name){
+    unsigned ID = find_intersection_id_from_name(intersection_name);
+    return intersection_segment_table.find(ID)->second;
+}
+
+std::vector<unsigned> find_intersection_street_segments_Helper(unsigned intersection_id){
+   std::vector<unsigned> result;
+    unsigned number = getIntersectionStreetSegmentCount(intersection_id);
+    for(unsigned count = 0;count<number;count++){
+        result.push_back(getIntersectionStreetSegment(intersection_id,count));
+    }
+    return result;
+    
+}
+
+std::vector<unsigned> find_intersection_street_segments(unsigned intersection_id){
+    return intersection_segment_table.find(intersection_id)->second;
+}
+
+std::vector<std::string> find_intersection_street_names(std::string intersection_name){
+    unsigned ID= find_intersection_id_from_name(intersection_name);
+    return intersection_street_table.find(ID)->second;
+}
+
+std::vector<std::string> find_intersection_street_names_Helper(unsigned intersection_id){
+    std::vector<unsigned> segments = find_intersection_street_segments(intersection_id);
+    std::vector<std::string> streets;
+    unsigned count;
+    unsigned number = segments.size();
+    unsigned NumOfStreetAdded = 0;
+    for(count=0;count<number;count++){
+   std::string name = getStreetName(getStreetSegmentStreetID(segments[count]));
+        
+        if(NumOfStreetAdded == 0){
+            streets.push_back(name);
+            NumOfStreetAdded++;
+            continue;
+        }
+        else{
+            bool repeated = false;
+        for(unsigned i = 0; i<NumOfStreetAdded;i++){
+            if(streets[i] == name){
+                repeated = true;
+                break;
+            }
+        }
+            if(!repeated){
+                streets.push_back(name);
+                NumOfStreetAdded++;
+            }
+        }
+    }
+ 
+    return streets;
+}
+
+
+std::vector<std::string> find_intersection_street_names(unsigned intersection_id){
+    return intersection_street_table.find(intersection_id)->second;
+}
+bool are_directly_connected(std::string intersection_name1, std::string intersection_name2){
+    if(intersection_name1==intersection_name2){
+        return true;
+    }
+    vector<unsigned> adjacent = find_adjacent_intersections(intersection_name1);
+    unsigned des_ID = find_intersection_id_from_name(intersection_name2);
+    unsigned number_of_adjacent = adjacent.size();
+    unsigned count;
+    for(count=0;count<number_of_adjacent;count++){
+        if(adjacent[count]==des_ID){
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<unsigned> find_adjacent_intersections_Helper(std::string intersection_name){
+    unsigned intersectionID = find_intersection_id_from_name(intersection_name);
+    unsigned SegmentNumber = getIntersectionStreetSegmentCount(intersectionID);
+    unsigned count;
+    std::vector<unsigned> result;
+    for(count = 0;count<SegmentNumber;count++){
+        unsigned segmentID = getIntersectionStreetSegment(intersectionID,count);
+        StreetSegmentEnds end = getStreetSegmentEnds(segmentID);
+        if(!getStreetSegmentOneWay(segmentID)){
+            if(end.from != intersectionID){
+                result.push_back(end.from);
+                continue;
+            }
+            else{
+                result.push_back(end.to);
+                continue;
+            }
+        }
+        
+        else{
+            if(end.from == intersectionID){
+                result.push_back(end.to);
+                continue;
+            }
+        }
+    }
+    
+    
+    return result;
+}
+
+std::vector<unsigned> find_adjacent_intersections(std::string intersection_name){
+    return adjacent_intersection_table.find(intersection_name)->second;
+}
+
+double find_distance_between_two_points(LatLon point1, LatLon point2){
+    double x1,x2,y1,y2;
+    double lataverage;
+    double distance;
+    y1=point1.lat*DEG_TO_RAD;
+    y2=point2.lat*DEG_TO_RAD;
+    lataverage=(y1+y2)/2;
+    x1=point1.lon*cos(lataverage)*DEG_TO_RAD;
+    x2=point2.lon*cos(lataverage)*DEG_TO_RAD;
+    distance=EARTH_RADIUS_IN_METERS*sqrt((y2-y1)*(y2-y1)+(x2-x1)*(x2-x1));
+    return distance;
+}
+
+
+double find_street_segment_length_Helper(unsigned street_segment_id){
+    unsigned long first_intersection_id, second_intersection_id; 
+    unsigned number_of_curvepoints;
+    unsigned curvepoint_id=0;
+    LatLon intersection1,intersection2;
+    double distance=0;
+    first_intersection_id = getStreetSegmentEnds(street_segment_id).from;
+    second_intersection_id = getStreetSegmentEnds(street_segment_id).to;
+    intersection1=getIntersectionPosition(first_intersection_id);
+    intersection2=getIntersectionPosition(second_intersection_id);
+    number_of_curvepoints = getStreetSegmentCurvePointCount(street_segment_id);
+    
+    if (number_of_curvepoints==0){
+        distance=find_distance_between_two_points(intersection1,intersection2);
+    }
+    else {
+        distance=find_distance_between_two_points(intersection1,getStreetSegmentCurvePoint(street_segment_id,curvepoint_id));
+        for(curvepoint_id=1; curvepoint_id < number_of_curvepoints; curvepoint_id++){
+            distance+=find_distance_between_two_points(getStreetSegmentCurvePoint(street_segment_id,curvepoint_id-1),getStreetSegmentCurvePoint(street_segment_id,curvepoint_id));
+        }
+        distance+=find_distance_between_two_points(getStreetSegmentCurvePoint(street_segment_id,curvepoint_id-1),intersection2);
+    }
+    return distance;
+}
+
+double find_street_segment_length(unsigned street_segment_id){
+    return segment_length_table.find(street_segment_id)->second;
+}
+double find_street_length(std::string street_name){
+    unsigned number_of_segments;
+    unsigned count;
+    double distance=0;
+    vector<unsigned> streetsegments=find_street_street_segments(street_name);
+    number_of_segments=streetsegments.size();
+    for(count=0; count<number_of_segments; count++){
+        distance += find_street_segment_length(streetsegments[count]);
+    }
+    return distance;
+}
+
+double find_segment_travel_time(unsigned street_segment_id){
+    return find_street_segment_length(street_segment_id)/1000/getStreetSegmentSpeedLimit(street_segment_id)*60;
+    
+}
+
+std::string find_closest_point_of_interest(LatLon my_position){
+    unsigned long long number_of_interests=getNumberOfPointsOfInterest();
+    unsigned long long count;
+    unsigned long long interest_id;
+    double distance;
+    double mindistance=find_distance_between_two_points(my_position,getPointOfInterestPosition(0));
+    for(count=1; count<number_of_interests; count++){
+        distance=find_distance_between_two_points(my_position,getPointOfInterestPosition(count));
+        if(distance<mindistance){
+            mindistance=distance;
+            interest_id=count;
+        }
+    }
+    return getPointOfInterestName(interest_id);
+}
+
+
+std::vector<unsigned> find_street_street_segments(std::string street_name){
+    return SegmentsOfStreet.find(street_name)->second;
+}
+
+std::vector<unsigned> find_all_street_intersections_Helper(std::string street_name){
+    vector<unsigned> intersections;
+    vector<unsigned> segments = find_street_street_segments(street_name);
+    unsigned number_of_segments = segments.size();
+    unsigned count;
+    for(count=0;count<number_of_segments;count++){
+        bool fromadded = false;
+        bool toadded = false;
+        StreetSegmentEnds ends = getStreetSegmentEnds(segments[count]);
+        /*if(intersectionAdded==0){
+            intersections.push_back(ends.from);
+            intersections.push_back(ends.to);
+            intersectionAdded=2;
+            cout<<"check2\n";
+            continue;
+        }*/
+        
+        for(auto iter= intersections.begin(); iter != intersections.end(); iter++){
+            if(*iter == ends.from){
+                fromadded = true;
+            }
+            if(*iter == ends.to){
+                toadded = true;
+            }
+            if(fromadded && toadded){
+                break;
+            }
+        }
+        if(!fromadded){
+            intersections.push_back(ends.from);
+            //intersectionAdded++;
+        }
+        if(!toadded){
+            intersections.push_back(ends.to);
+            //intersectionAdded++;
+        }
+        }
+    
+    return intersections;
+}
+
+std::vector<unsigned> find_all_street_intersections(std::string street_name){
+    return street_intersection_table.find(street_name)->second;
+}

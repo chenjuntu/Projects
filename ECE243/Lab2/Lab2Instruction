@@ -1,0 +1,113 @@
+Lab 2: Memory Operations, Loops, and Conditionals
+
+Description
+Preparation (2 marks)
+In Lab (2 marks)
+Quiz (1 mark)
+Further reading
+Description
+The purpose of this lab is to familiarize you with Nios II assembly language programming and using the debugger to observe how your program functions.
+
+You will be given a list of 10 numbers in memory. You are to iterate through this list of numbers, determine whether each number is negative, then write negative numbers to one output list in memory, and non-negative numbers to another list. Count the number of negative and non-negative numbers and have the result in r2 and r3, respectively. When the program ends, examine the two output lists of numbers for correctness, using the debugger.
+
+The input list of words begins at location IN_LIST. The two output lists start at locations OUT_NEGATIVE and OUT_POSITIVE.
+
+Sample Input
+For convenience, the sample input is also available here: lab2_sample.s.
+
+# Include nios_macros.s to workaround a bug in the movia pseudo-instruction.
+.include "nios_macros.s"
+
+.equ RED_LEDS, 0x10000000
+.equ GREEN_LEDS, ?     # (Hint: See DESL website for documentation on LEDs)
+
+.data                  # "data" section for input and output lists
+
+IN_LIST:               # List of 10 words starting at location IN_LIST
+    .word 1
+    .word -1
+    .word -2
+    .word 2
+    .word 0
+    .word -3
+    .word 100
+    .word 0xffffff9c
+    .word 0x100
+    .word 0b1111
+    
+OUT_NEGATIVE:
+    .skip ?            # Reserve space for 10 output words
+    
+OUT_POSITIVE:
+    .skip ?            # Reserve space for 10 output words
+
+#-----------------------------------------
+
+.text                  # "text" section for (read-only) code
+
+    # Register allocation:
+    #   r0 is zero, and r1 is "assembler temporary". Not used here.
+    #   r2  Holds the number of negative numbers in the list
+    #   r3  Holds the number of non-negative numbers in the list
+    #   r_  A pointer to ___
+    #   r_  loop counter for ___
+    #   r16 Register for short-lived temporary values.
+    #   etc...
+
+.global _start
+_start:
+
+    # Your program here. Pseudocode and some code done for you:
+    
+    # Begin loop to process each number
+    
+        # Process a number here:
+        #    if (number is negative) { 
+        #        insert number in OUT_NEGATIVE list
+        #        increment count of negative values (r2)
+        #    } else {
+        #        insert number in OUT_POSITIVE list
+        #        increment count of non-negative values (r3)
+        #    }
+        # Done processing.
+        
+        # After processing each number, output current counts to LEDs.
+        # (You'll learn more about I/O in Lab 4.)
+        movia  r16, RED_LEDS          # r16 is a temporary value
+        stwio  r2, 0(r16)             # Send r2 out to the red LEDs device
+        movia  r16, GREEN_LEDS
+        stwio  r3, 0(r16)             # Send r3 out to the green LEDs device
+        # Finished output to LEDs.
+        
+    # End loop
+
+LOOP_FOREVER:
+    br LOOP_FOREVER                   # Loop forever.
+    
+Sample Output
+The above input list of 10 numbers has 4 negative and 6 non-negative numbers. Thus, when your program ends, the output should be the following:
+
+r2 should be 4
+r3 should be 6
+The first four words in memory starting at location OUT_NEGATIVE (in decimal) should be -1, -2, -3, and -100
+The first six words starting at location OUT_POSITIVE should be 1, 2, 0, 100, 256, and 15.
+Preparation (2 marks)
+How do you check the value of the registers (r2 and r3) using the debugger at the end of your program?
+How would you know at what address the output lists begin?
+How do you examine the contents of the two output lists in memory using the debugger?
+Why is the final br LOOP_FOREVER necessary? (Hint: What instructions would the processor execute after finishing processing the input list if br LOOP_FOREVER were not there?)
+Write the assembly program that separates a list of numbers into a negative and non-negative list, and counts the number of each, as described above.
+In-lab (2 marks)
+Demonstrate your working program that operates on a list of 10 words:
+Single-step your program for the first few iterations to show that your code can process both negative and non-negative numbers correctly. Point out how the values of relevant registers change after each number is processed.
+Set a breakpoint at a suitable location and show the rest of the numbers being added one by one into the output lists. Do the values in r2 and r3 match the red and green LEDs after each iteration?
+When the program is finished (how do you know?), examine the final output lists in memory and counts in r2 and r3. Verify using the debugger that all outputs are correct.
+Add the following enhancements your program (Don't erase part 1!):
+Make your program work with an input list of variable length of up to 20 words, where the last valid entry is followed by an element with value zero. This is known as a zero-terminated list, and is similar to how the end of a variable-length null-terminated string (.string) is indicated by a zero (or "null") byte. Categorize numbers into negative and positive, and terminate your program when a number zero is seen (but do not process the zero). In the sample input given above, there should be 2 negative and 2 positive numbers.
+Also add a delay after completing each step to slow the LED sequence enough to be observed on human time scales (See delay loop in Lab 1).
+Package your projects for both part 1 and 2 into one code.zip file, then submit your code on Blackboard
+Quiz (1 mark)
+Be prepared to answer any questions about how to use the debugger to examine CPU and memory state using the Monitor Program, load and store operations to memory, and how to write structured programming constructs (loops, if-then-else, etc.) in assembly.
+
+Further Reading
+Nios II has 31 general-purpose registers (r0 is always zero, r1 through r31 are general-purpose). For more information on how these registers are usually used by other people or C compilers (i.e., by "convention"), see Page 2 of the Nios II Application Binary Interface.
