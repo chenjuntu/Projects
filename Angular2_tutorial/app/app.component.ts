@@ -5,7 +5,6 @@ import { Component } from '@angular/core';
     template: `
     <div>
         <h1>{{pageTitle}}</h1>
-        <h1>{{imageWidth}}</h1>
         <pm-products>Loading the product list</pm-products>
     </div>
     `
